@@ -1,5 +1,11 @@
-Flask
-vosk
-ffmpeg-python
-gunicorn
-werkzeug
+Flask==3.0.2
+Werkzeug==3.0.1
+gunicorn==21.2.0
+
+vosk==0.3.45
+ffmpeg-python==0.2.0
+
+numpy==1.26.4
+scipy==1.12.0
+
+requests==2.31.0
