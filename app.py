@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, session, url_for, abort
+from flask import Flask, render_template, request, jsonify, session, url_for
 from vosk import Model, KaldiRecognizer
 import json
 import wave
@@ -12,9 +12,9 @@ import math
 app = Flask(__name__)
 app.secret_key = "super-secret-key-change-this"
 
-# ----------------------------
-# Load Sentences from JSON
-# ----------------------------
+# =====================================================
+# LOAD SENTENCES ONLY ONCE
+# =====================================================
 DATASET_PATH = "sentences.json"
 with open(DATASET_PATH, "r", encoding="utf-8") as f:
     DATASET = json.load(f)
@@ -22,16 +22,18 @@ with open(DATASET_PATH, "r", encoding="utf-8") as f:
 READ_SENTENCES = DATASET.get("read_speak_sentences", [])
 LISTEN_SENTENCES = DATASET.get("listen_speak_sentences", [])
 
-# ----------------------------
-# VOSK Model
-# ----------------------------
+# =====================================================
+# LOAD VOSK MODEL ONLY ONCE (⚡ SUPER SPEED)
+# =====================================================
+print("🔥 Loading Vosk Model once...")
 MODEL_PATH = "vosk-model-small-en-us-0.15"
-vosk_model = Model(MODEL_PATH)
+VOSK_MODEL = Model(MODEL_PATH)
+print("✅ Model loaded!")
 
 
-# ---------------------------------
-#  JARO SIMILARITY (for Pronunciation)
-# ---------------------------------
+# =====================================================
+# JARO SIMILARITY (PRONUNCIATION)
+# =====================================================
 def jaro_similarity(s1, s2):
     if s1 == s2:
         return 1.0
@@ -75,46 +77,44 @@ def jaro_similarity(s1, s2):
     ) / 3
 
 
-# ---------------------------------
-#  CONVERT AUDIO TO TEXT + DURATION
-# ---------------------------------
-def convert_audio_to_text(audio_path):
-    wav_path = audio_path.replace(".webm", ".wav")
+# =====================================================
+# FAST AUDIO CONVERSION + SPEECH-TO-TEXT
+# =====================================================
+def convert_audio_to_text(webm_path):
+    wav_path = webm_path.replace(".webm", ".wav")
 
-    os.system(f'ffmpeg -i "{audio_path}" -ar 16000 -ac 1 -y "{wav_path}"')
+    # ⚡ Quiet mode = faster ffmpeg
+    cmd = f'ffmpeg -y -i "{webm_path}" -ac 1 -ar 16000 "{wav_path}" -loglevel quiet'
+    os.system(cmd)
 
-    wf = wave.open(wav_path, "rb")
-    rate = wf.getframerate()
-    frames = wf.getnframes()
-    duration = frames / float(rate)
+    # Load audio
+    with wave.open(wav_path, "rb") as wf:
+        rate = wf.getframerate()
+        frames = wf.getnframes()
+        duration = frames / rate
 
-    rec = KaldiRecognizer(vosk_model, rate)
-    rec.SetWords(True)
+        rec = KaldiRecognizer(VOSK_MODEL, rate)
 
-    text = ""
-    while True:
-        data = wf.readframes(4000)
-        if len(data) == 0:
-            break
-        if rec.AcceptWaveform(data):
-            part = json.loads(rec.Result()).get("text", "")
-            if part:
-                text += " " + part
+        final_text = ""
 
-    final = json.loads(rec.FinalResult()).get("text", "")
-    if final:
-        text += " " + final
+        while True:
+            data = wf.readframes(4000)
+            if not data:
+                break
+            rec.AcceptWaveform(data)
 
-    return text.strip(), duration
+        result = json.loads(rec.FinalResult()).get("text", "")
+        final_text = result.strip()
+
+    return final_text, duration
 
 
-# ---------------------------------
-#  ADVANCED SCORING FUNCTIONS
-# ---------------------------------
+# =====================================================
+# SCORING FUNCTIONS
+# =====================================================
 def score_pronunciation(reference, spoken):
     ref_words = reference.lower().split()
     spoken_words = spoken.lower().split()
-
     if not spoken_words:
         return 0.0
 
@@ -130,40 +130,28 @@ def score_pronunciation(reference, spoken):
 
 def score_fluency(reference, duration):
     word_count = len(reference.split())
-    expected_time = word_count * 0.55  # seconds
-
+    expected = word_count * 0.55
     if duration <= 0:
         return 0.0
 
-    ratio = expected_time / duration
-
-    if ratio > 1:
-        score = 100 - ((ratio - 1) * 25)
-    else:
-        score = ratio * 100
-
-    return round(max(0, min(100, score)), 2)
+    ratio = expected / duration
+    return round(max(0, min(100, ratio * 100)), 2)
 
 
 def score_grammar(reference, spoken):
     ref_words = reference.lower().split()
     spoken_words = spoken.lower().split()
-
     if not spoken_words:
         return 0.0
 
-    important = ref_words  # simple keyword grammar check
-    correct = sum(1 for w in important if w in spoken_words)
-
-    return round((correct / len(important)) * 100, 2)
+    correct = sum(1 for w in ref_words if w in spoken_words)
+    return round((correct / len(ref_words)) * 100, 2)
 
 
 def score_accuracy(reference, spoken):
-    ref = reference.lower().strip()
-    sp = spoken.lower().strip()
-    if not sp:
+    if not spoken.strip():
         return 0.0
-    return round(difflib.SequenceMatcher(None, ref, sp).ratio() * 100, 2)
+    return round(difflib.SequenceMatcher(None, reference.lower(), spoken.lower()).ratio() * 100, 2)
 
 
 def calculate_final_scores(reference, spoken, duration):
@@ -188,19 +176,14 @@ def calculate_final_scores(reference, spoken, duration):
     }
 
 
-# ----------------------------
-# TEST START LOGIC
-# ----------------------------
-def start_test(mode, num_questions):
+# =====================================================
+# TEST START
+# =====================================================
+def start_test(mode, qcount):
+    src = READ_SENTENCES if mode == "read" else LISTEN_SENTENCES
+    qcount = max(3, min(20, int(qcount)))
 
-    if mode == "read":
-        src = READ_SENTENCES
-    else:
-        src = LISTEN_SENTENCES
-
-    num_questions = max(3, min(20, int(num_questions)))
-
-    questions = random.sample(src, num_questions)
+    questions = random.sample(src, qcount)
 
     session_id = uuid.uuid4().hex
     user_folder = os.path.join("uploads", f"user_{session_id}")
@@ -210,18 +193,16 @@ def start_test(mode, num_questions):
         "mode": mode,
         "questions": questions,
         "current_index": 0,
-        "scores": [],
-        "spoken_texts": [],
         "details": [],
         "user_folder": user_folder
     })
 
-    return questions[0], 0, len(questions)
+    return questions[0], qcount
 
 
-# ----------------------------
+# =====================================================
 # ROUTES
-# ----------------------------
+# =====================================================
 @app.route("/")
 def home():
     return render_template("index.html")
@@ -235,56 +216,63 @@ def choose_questions(mode):
 @app.route("/start-test", methods=["POST"])
 def start_test_route():
     mode = request.form.get("mode")
-    qcount = int(request.form.get("question_count", 20))
+    count = int(request.form.get("question_count", 20))
 
-    sentence, idx, total = start_test(mode, qcount)
+    first_q, total = start_test(mode, count)
 
     template = "read_speak.html" if mode == "read" else "listen_speak.html"
-    return render_template(template, sentence=sentence, current_index=1, total_questions=total)
+    return render_template(template, sentence=first_q, current_index=1, total_questions=total)
 
 
-# ----------------------------
-# EVALUATE (MAIN LOGIC)
-# ----------------------------
+# =====================================================
+# EVALUATION LOGIC (FAST MODE)
+# =====================================================
 @app.route("/evaluate", methods=["POST"])
 def evaluate():
     questions = session["questions"]
     idx = session["current_index"]
+    total = len(questions)
     user_folder = session["user_folder"]
 
+    # Save uploaded audio
     audio = request.files["audio"]
     file_id = uuid.uuid4().hex
-    audio_path = os.path.join(user_folder, f"{file_id}.webm")
-    audio.save(audio_path)
+    webm_path = os.path.join(user_folder, f"{file_id}.webm")
+    audio.save(webm_path)
 
     reference = questions[idx]
 
-    spoken, duration = convert_audio_to_text(audio_path)
+    # Convert + Recognize
+    spoken, duration = convert_audio_to_text(webm_path)
+
+    # Cleanup
     try:
-        os.remove(audio_path)
+        os.remove(webm_path)
+        os.remove(webm_path.replace(".webm", ".wav"))
     except:
         pass
 
+    # Score
     scores = calculate_final_scores(reference, spoken, duration)
 
     session["details"].append({
         "question": reference,
         "spoken": spoken,
-        "pronunciation": scores["pronunciation"],
-        "fluency": scores["fluency"],
-        "grammar": scores["grammar"],
-        "accuracy": scores["accuracy"],
-        "final": scores["final"]
+        **scores
     })
 
+    # Next question
     idx += 1
     session["current_index"] = idx
 
-    if idx >= len(questions):
-        session["overall"] = round(
-            sum(d["final"] for d in session["details"]) / len(session["details"]), 2
+    if idx >= total:
+        final_score = round(
+            sum(d["final"] for d in session["details"]) / total,
+            2
         )
+        session["overall"] = final_score
 
+        # delete folder
         try:
             shutil.rmtree(user_folder)
         except:
@@ -292,32 +280,33 @@ def evaluate():
 
         return jsonify({"done": True, "redirect_url": url_for("results")})
 
-    next_sentence = questions[idx]
     return jsonify({
         "done": False,
         "current": idx + 1,
-        "total": len(questions),
-        "next_sentence": next_sentence
+        "total": total,
+        "next_sentence": questions[idx]
     })
 
 
-# ----------------------------
+# =====================================================
 # RESULTS PAGE
-# ----------------------------
+# =====================================================
 @app.route("/results")
 def results():
-    return render_template("result.html",
-                           mode=session["mode"],
-                           overall=session["overall"],
-                           details=session["details"])
+    return render_template(
+        "result.html",
+        mode=session["mode"],
+        overall=session["overall"],
+        details=session["details"]
+    )
 
 
 @app.route("/retry")
 def retry():
-    user_folder = session.get("user_folder")
-    if user_folder:
+    folder = session.get("user_folder")
+    if folder:
         try:
-            shutil.rmtree(user_folder)
+            shutil.rmtree(folder)
         except:
             pass
     session.clear()
