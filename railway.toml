@@ -1,2 +1,8 @@
 [build]
-apt = ["ffmpeg"]
+builder = "Nixpacks"
+
+[build.nixpacks]
+apt_packages = ["ffmpeg"]
+
+[deploy]
+start = "gunicorn app:app --timeout 200 --workers 2"
