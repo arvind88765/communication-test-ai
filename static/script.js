@@ -64,15 +64,14 @@ function setupTestPage(mode) {
   const progressFill = document.getElementById("progressFill");
   const sentenceEl = document.getElementById("sentence");
 
-  // Listen mode: play hidden sentence via TTS
+  // Listen mode: play TTS
   if (playBtn && mode === "listen") {
     playBtn.addEventListener("click", () => {
       const text = sentenceEl.value;
       if ("speechSynthesis" in window) {
-        const u = new SpeechSynthesisUtterance(text);
-        speechSynthesis.speak(u);
+        speechSynthesis.speak(new SpeechSynthesisUtterance(text));
       } else {
-        alert("Speech synthesis not supported in this browser.");
+        alert("Speech synthesis not supported.");
       }
     });
   }
@@ -100,9 +99,7 @@ function setupTestPage(mode) {
         countdownInterval = setInterval(() => {
           timeLeft -= 1;
           timerEl.textContent = timeLeft;
-          if (timeLeft <= 0) {
-            stopRecording(stopBtn, statusEl);
-          }
+          if (timeLeft <= 0) stopRecording(stopBtn, statusEl);
         }, 1000);
       };
 
@@ -126,7 +123,7 @@ function setupTestPage(mode) {
     stopRecording(stopBtn, statusEl);
   });
 
-  submitBtn.addEventListener("click", () => {
+  submitBtn.addEventListener("click", async () => {
     submitBtn.disabled = true;
 
     if (!audioChunks.length) {
@@ -136,51 +133,66 @@ function setupTestPage(mode) {
     }
 
     const blob = new Blob(audioChunks, { type: "audio/webm" });
+
+    console.log("Blob size:", blob.size);
+    console.log("Blob type:", blob.type);
+
     const formData = new FormData();
     formData.append("audio", blob);
 
     statusEl.textContent = "Processing your answer...";
 
-    fetch("/evaluate", {
-      method: "POST",
-      body: formData
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.done) {
-          statusEl.textContent = "Test completed. Showing results...";
-          window.location.href = data.redirect_url;
-          return;
-        }
-
-        statusEl.textContent = "Next question loaded.";
-
-        const total = data.total;
-        const current = data.current;
-
-        questionNumEl.textContent = current;
-        const pct = (current / total) * 100;
-        progressFill.style.width = pct + "%";
-
-        // For read mode, <p>; for listen mode, hidden <input>
-        if (sentenceEl.tagName.toLowerCase() === "p") {
-          sentenceEl.textContent = data.next_sentence;
-        } else {
-          sentenceEl.value = data.next_sentence;
-        }
-
-        audioChunks = [];
-        submitBtn.disabled = true;
-        startBtn.disabled = false;
-        stopBtn.disabled = true;
-        timeLeft = 30;
-        timerEl.textContent = timeLeft;
-      })
-      .catch((err) => {
-        console.error(err);
-        statusEl.textContent = "Error sending audio to server.";
-        submitBtn.disabled = false;
+    try {
+      const res = await fetch("/evaluate", {
+        method: "POST",
+        body: formData
       });
+
+      console.log("Response status:", res.status);
+
+      if (!res.ok) {
+        const text = await res.text();
+        console.error("Server Error:", text);
+        throw new Error("Server returned error");
+      }
+
+      const data = await res.json();
+      console.log("Server JSON:", data);
+
+      if (data.done) {
+        statusEl.textContent = "Test completed. Showing results...";
+        window.location.href = data.redirect_url;
+        return;
+      }
+
+      // Load next question
+      statusEl.textContent = "Next question loaded.";
+
+      const total = data.total;
+      const current = data.current;
+
+      questionNumEl.textContent = current;
+      progressFill.style.width = (current / total) * 100 + "%";
+
+      if (sentenceEl.tagName.toLowerCase() === "p") {
+        sentenceEl.textContent = data.next_sentence;
+      } else {
+        sentenceEl.value = data.next_sentence;
+      }
+
+      // reset for next recording
+      audioChunks = [];
+      submitBtn.disabled = true;
+      startBtn.disabled = false;
+      stopBtn.disabled = true;
+      timeLeft = 30;
+      timerEl.textContent = timeLeft;
+
+    } catch (err) {
+      console.error("Fetch error:", err);
+      statusEl.textContent = "Error sending audio to server.";
+      submitBtn.disabled = false;
+    }
   });
 }
 
