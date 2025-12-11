@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <div class="test-wrapper">
+    <div class="test-header">
+      <div>
+        <div class="test-mode">Read &amp; Speak</div>
+        <div class="test-subtitle">Read the sentence aloud.</div>
+      </div>
+
+      <div class="test-meta">
+        <div class="meta-item">
+          <span class="meta-label">Question</span>
+          <span class="meta-value">
+            <span id="questionNumber">{{ current_index }}</span> /
+            <span id="totalQuestions">{{ total_questions }}</span>
+          </span>
+        </div>
+
+        <div class="meta-item">
+          <span class="meta-label">Time Left</span>
+          <span class="meta-value"><span id="timer">30</span>s</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="test-card">
+      <div class="sentence-box" id="sentenceBox">
+        <p id="sentence">{{ sentence }}</p>
+      </div>
+
+      <canvas id="waveform" width="600" height="80" class="wave-canvas"></canvas>
+
+      <div class="controls-row">
+        <button id="startBtn" class="primary-btn">🎤 Start</button>
+        <button id="stopBtn" class="secondary-btn" disabled>⏹ Stop</button>
+      </div>
+
+      <div class="status-row">
+        <div id="status" class="status-text">Click Start when you are ready.</div>
+      </div>
+
+      <div class="progress-row">
+        <div class="progress-label">Session Progress</div>
+        <div class="progress-bar">
+          <div id="progressFill" class="progress-fill"
+               style="width: {{ (current_index / total_questions) * 100 }}%;">
+          </div>
+        </div>
+      </div>
+
+      <div class="bottom-row">
+        <a href="{{ url_for('home') }}" class="ghost-btn">Exit Test</a>
+        <button id="submitBtn" class="primary-btn" disabled>Submit &amp; Next</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+  <script>
+    setupTestPage("read");
+  </script>
+{% endblock %}

@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="result-wrapper">
+
+  <!-- MAIN SCORE CARD -->
+  <div class="result-card">
+    <h2>Test Completed</h2>
+
+    <p class="result-mode">
+      Mode:
+      {% if mode == "listen" %}
+        Listen & Speak
+      {% else %}
+        Read & Speak
+      {% endif %}
+    </p>
+
+    <!-- OVERALL SCORE CIRCLE -->
+    <div class="overall-score-circle">
+      <div class="score-value">{{ overall }}%</div>
+      <div class="score-label">Overall Score</div>
+    </div>
+
+    <p class="result-summary">
+      Great job! You completed {{ details|length }} questions.  
+      Review your detailed scoring below.
+    </p>
+
+    <div class="result-actions">
+      <a href="{{ url_for('home') }}" class="ghost-btn">Back to Home</a>
+      <button id="retryBtn" class="primary-btn">Retry New Session</button>
+    </div>
+  </div>
+
+  
+  <!-- QUESTION-WISE BREAKDOWN -->
+  <div class="detail-card">
+    <h3>Question-wise Detailed Breakdown</h3>
+
+    <div class="detail-table">
+      <div class="detail-header">
+        <span>#</span>
+        <span>Sentence</span>
+        <span>Your Speech</span>
+        <span>Pron</span>
+        <span>Fluency</span>
+        <span>Grammar</span>
+        <span>Accuracy</span>
+        <span>Final</span>
+      </div>
+
+      {% for row in details %}
+      <div class="detail-row">
+        <span>{{ loop.index }}</span>
+        <span>{{ row.question }}</span>
+        <span>{{ row.spoken if row.spoken else "-" }}</span>
+        <span>{{ row.pronunciation }}%</span>
+        <span>{{ row.fluency }}%</span>
+        <span>{{ row.grammar }}%</span>
+        <span>{{ row.accuracy }}%</span>
+        <span><b>{{ row.final }}%</b></span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<script>
+  document.getElementById("retryBtn").addEventListener("click", async () => {
+      const res = await fetch("{{ url_for('retry') }}");
+      const url = await res.text();
+      window.location.href = url;
+  });
+</script>
+
+<style>
+
+.result-wrapper {
+  width: 100%;
+  max-width: 1200px;
+  margin: auto;
+  padding: 20px;
+}
+
+/* ----- CARD STYLING ----- */
+
+.result-card, .detail-card {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 30px;
+  margin-bottom: 30px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+  color: #222;
+}
+
+h3 {
+  margin-bottom: 15px;
+}
+
+/* ----- SCORE CIRCLE ----- */
+
+.overall-score-circle {
+  width: 170px;
+  height: 170px;
+  margin: 25px auto;
+  border-radius: 50%;
+  background: #000;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.score-value {
+  font-size: 42px;
+  font-weight: bold;
+}
+
+.score-label {
+  font-size: 14px;
+  opacity: 0.8;
+}
+
+/* ----- TABLE FIX ----- */
+
+.detail-table {
+  width: 100%;
+  margin-top: 20px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: white;
+}
+
+/* Header */
+.detail-header {
+  display: grid;
+  grid-template-columns: 40px 2fr 2fr 90px 90px 90px 90px 90px;
+  background: #f1f1f1;
+  font-weight: bold;
+  padding: 12px;
+  color: #000;
+  font-size: 14px;
+  border-bottom: 1px solid #ddd;
+}
+
+/* Rows */
+.detail-row {
+  display: grid;
+  grid-template-columns: 40px 2fr 2fr 90px 90px 90px 90px 90px;
+  padding: 14px 12px;
+  font-size: 14px;
+  color: #000;
+  align-items: center;
+  border-bottom: 1px solid #eee;
+}
+
+.detail-row:nth-child(even) {
+  background: #fafafa;
+}
+
+.detail-row:nth-child(odd) {
+  background: #ffffff;
+}
+
+.detail-row span {
+  white-space: normal;
+  word-wrap: break-word;
+}
+
+/* ----- Buttons ----- */
+
+.result-actions {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-top: 25px;
+}
+
+.primary-btn {
+  padding: 10px 20px;
+  background: #0066ff;
+  color: white;
+  border-radius: 8px;
+  font-weight: bold;
+  transition: 0.2s;
+}
+
+.primary-btn:hover {
+  background: #004ecc;
+}
+
+.ghost-btn {
+  padding: 10px 20px;
+  border: 2px solid #0066ff;
+  border-radius: 8px;
+  background: white;
+  color: #0066ff;
+  font-weight: bold;
+  transition: 0.2s;
+}
+
+.ghost-btn:hover {
+  background: #e8f0ff;
+}
+
+</style>
+
+{% endblock %}

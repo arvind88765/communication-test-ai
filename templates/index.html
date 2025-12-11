@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <section class="hero-card">
+    <div class="hero-content">
+      <h1>English Communication Test Practice</h1>
+      <p>
+        Simulate a real corporate communication assessment with
+        <strong>custom-length sessions</strong> and AI-based scoring.
+      </p>
+      <p class="hero-note">
+        Choose a mode, then select how many questions you want
+        (3 to 20) before starting the test.
+      </p>
+    </div>
+  </section>
+
+  <section class="mode-grid">
+    <article class="mode-card">
+      <h2>Read &amp; Speak</h2>
+      <p>
+        Read the sentence shown on screen and speak clearly within the time limit.
+        Perfect for fluency and accuracy practice.
+      </p>
+      <ul class="feature-list">
+        <li>3–20 text prompts per session</li>
+        <li>30s timer per question</li>
+        <li>AI scoring in percentage</li>
+      </ul>
+      <a href="{{ url_for('choose_questions', mode='read') }}" class="primary-btn full-width">
+        Start Read &amp; Speak Test
+      </a>
+    </article>
+
+    <article class="mode-card">
+      <h2>Listen &amp; Speak</h2>
+      <p>
+        Listen to an audio sentence and repeat it as closely as possible.
+        Ideal for listening and pronunciation practice.
+      </p>
+      <ul class="feature-list">
+        <li>3–20 audio prompts per session</li>
+        <li>30s timer per question</li>
+        <li>No text shown on screen</li>
+      </ul>
+      <a href="{{ url_for('choose_questions', mode='listen') }}" class="secondary-btn full-width">
+        Start Listen &amp; Speak Test
+      </a>
+    </article>
+  </section>
+{% endblock %}

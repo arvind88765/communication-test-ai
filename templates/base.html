@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Communication Assessment Practice</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="app-body">
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="brand">
+        <div class="logo-circle">CA</div>
+        <div class="brand-text">
+          <div class="brand-title">Communication Assessment</div>
+          <div class="brand-subtitle">Practice Portal</div>
+        </div>
+      </div>
+      <div class="header-right">
+        <span class="badge">Exam Mode</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="app-main">
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

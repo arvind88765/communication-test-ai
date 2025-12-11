@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <div class="test-wrapper">
+    <div class="test-card">
+      <h2>Select Number of Questions</h2>
+
+      <p class="instruction">
+        Choose how many questions you want in this session
+        (minimum 3, maximum 20).
+      </p>
+
+      <form method="post" action="{{ url_for('start_test_route') }}" class="question-form">
+        <input type="hidden" name="mode" value="{{ mode }}">
+
+        <div class="slider-wrapper">
+          <div class="slider-label-row">
+            <span class="slider-caption">Questions</span>
+            <span class="slider-value-badge" id="sliderValueBadge">20</span>
+          </div>
+
+          <div class="slider-track-container">
+            <input
+              type="range"
+              min="3"
+              max="20"
+              value="20"
+              class="question-slider"
+              id="questionSlider"
+              name="question_count"
+            />
+            <div class="slider-bubble" id="sliderBubble">20</div>
+          </div>
+
+          <div class="slider-min-max">
+            <span>3</span>
+            <span>20</span>
+          </div>
+        </div>
+
+        <div class="bottom-row" style="margin-top: 1.2rem;">
+          <a href="{{ url_for('home') }}" class="ghost-btn">Cancel</a>
+          <button type="submit" class="primary-btn">
+            Start
+            {% if mode == 'listen' %}
+              Listen &amp; Speak
+            {% else %}
+              Read &amp; Speak
+            {% endif %}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const slider = document.getElementById("questionSlider");
+    const bubble = document.getElementById("sliderBubble");
+    const badge = document.getElementById("sliderValueBadge");
+
+    function updateSliderBubble() {
+      const min = parseInt(slider.min, 10);
+      const max = parseInt(slider.max, 10);
+      const val = parseInt(slider.value, 10);
+
+      const percent = (val - min) / (max - min);
+      const trackWidth = slider.offsetWidth;
+      const bubbleX = percent * trackWidth;
+
+      bubble.style.left = bubbleX + "px";
+      bubble.textContent = val;
+      badge.textContent = val;
+    }
+
+    slider.addEventListener("input", updateSliderBubble);
+    window.addEventListener("load", updateSliderBubble);
+    window.addEventListener("resize", updateSliderBubble);
+  </script>
+{% endblock %}
