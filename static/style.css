@@ -375,3 +375,22 @@ body.app-body {
     justify-content: space-between;
   }
 }
+
+.app-footer {
+  margin-top: 3rem;
+  padding: 1.2rem 0 1.5rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  opacity: 0.85;
+}
+
+.app-footer .heart {
+  color: #ef4444;
+  margin: 0 0.15rem;
+}
+
+.app-footer .author {
+  color: #e5e7eb;
+  font-weight: 500;
+}
