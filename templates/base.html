@@ -6,31 +6,38 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
+
 <body class="app-body">
+
   <header class="app-header">
     <div class="header-inner">
-      <div class="brand">
+
+      <!-- CA LOGO AS HOME BUTTON -->
+      <a href="{{ url_for('home') }}" class="brand brand-link" title="Go to Home">
         <div class="logo-circle">CA</div>
         <div class="brand-text">
           <div class="brand-title">Communication Assessment</div>
           <div class="brand-subtitle">Practice Portal</div>
         </div>
-      </div>
+      </a>
+
       <div class="header-right">
         <span class="badge">Exam Mode</span>
       </div>
+
     </div>
   </header>
 
   <main class="app-main">
     {% block content %}{% endblock %}
   </main>
+
   <footer class="app-footer">
-  <p>
-    Made with <span class="heart">❤️</span> by
-    <span class="author">Rvind</span>
-  </p>
-</footer>
+    <p>
+      Made with <span class="heart">❤️</span> by
+      <span class="author">Rvind</span>
+    </p>
+  </footer>
 
 </body>
 </html>
